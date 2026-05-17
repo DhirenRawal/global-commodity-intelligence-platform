@@ -1,0 +1,102 @@
+The commodity production numbers and market share calculations in my app are inaccurate and incomplete.
+
+Right now the app is only summing a few selected regions/mines, which causes totals to be far lower than actual global production.
+
+Example:
+- Gold currently shows only ~850 tonnes total
+- Actual global annual gold production is ~3600–3700 tonnes
+
+I want you to completely redesign the commodity production dataset + calculation logic so that:
+
+1. Global production totals are accurate
+- Use real-world annual production statistics
+- Include ALL major producing countries/regions
+- Totals should approximately match trusted global production data
+
+2. Market share must be calculated dynamically
+marketShare = regionProduction / globalProduction * 100
+
+3. Add enough producers so totals are realistic
+For example gold should include:
+China
+Russia
+Australia
+Canada
+USA
+Ghana
+Mexico
+Kazakhstan
+Uzbekistan
+Peru
+Indonesia
+South Africa
+Brazil
+etc.
+
+4. Do this for ALL commodities, not just gold:
+- Gold
+- Silver
+- Platinum
+- Palladium
+- Copper
+- Oil (WTI/Brent)
+- Natural Gas
+- Wheat
+- Corn
+- Cocoa
+- Coffee
+- Soybeans
+- Rice
+and all others in the app.
+
+5. Replace hardcoded incomplete sample data
+The current dataset looks like demo/sample placeholder values.
+Create a structured scalable dataset.
+
+6. Create a centralized commodity dataset structure like:
+
+{
+  commodity: "Gold",
+  globalProduction: 3700,
+  unit: "tonnes/year",
+  producers: [
+    {
+      region: "China",
+      production: 380,
+      taxRate: 0,
+      lat: ...,
+      lng: ...
+    }
+  ]
+}
+
+7. The “Total Tracked Value” should equal:
+SUM(all producer annual production × live commodity price)
+
+8. Ensure units are consistent
+Examples:
+- Gold/silver/platinum → metric tonnes
+- Oil → barrels/day or barrels/year
+- Natural gas → bcm
+- Agriculture → million tonnes
+
+9. Add validation logic
+The app should warn if:
+SUM(producers.production) is far below globalProduction.
+
+10. Use trusted public reference ranges from:
+- USGS
+- World Gold Council
+- IEA
+- IMF
+- FAO
+- World Bank
+- Investing.com reference values
+
+11. Improve realism
+The map should include many more markers and regions instead of only 5–6 entries.
+
+12. Refactor calculations so future commodities can be added easily.
+
+Do NOT just tweak the displayed numbers.
+Fix the underlying data architecture and market-share calculation system properly.
