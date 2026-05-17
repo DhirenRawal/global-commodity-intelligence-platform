@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Commodities Intelligence Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: commodities
+    description: Commodity prices and data
+  - name: regions
+    description: Production regions and reserves
+  - name: weather
+    description: Weather data for commodity regions
+  - name: news
+    description: Commodity news and regulatory updates
 paths:
   /healthz:
     get:
@@ -24,6 +32,137 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /commodities:
+    get:
+      operationId: listCommodities
+      tags: [commodities]
+      summary: List all commodities with live prices
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter by category (metals, energy, agriculture)
+      responses:
+        "200":
+          description: List of commodities with current prices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Commodity"
+
+  /commodities/summary:
+    get:
+      operationId: getMarketSummary
+      tags: [commodities]
+      summary: Market overview — gainers, losers, totals
+      responses:
+        "200":
+          description: Market summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MarketSummary"
+
+  /commodities/{symbol}:
+    get:
+      operationId: getCommodity
+      tags: [commodities]
+      summary: Get commodity detail with price history
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Commodity detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommodityDetail"
+        "404":
+          description: Not found
+
+  /regions:
+    get:
+      operationId: listRegions
+      tags: [regions]
+      summary: List all production regions and reserves
+      parameters:
+        - in: query
+          name: commodityId
+          schema:
+            type: string
+          description: Filter by commodity ID
+      responses:
+        "200":
+          description: List of production regions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductionRegion"
+
+  /weather:
+    get:
+      operationId: getWeather
+      tags: [weather]
+      summary: Get weather for a location
+      parameters:
+        - in: query
+          name: lat
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: lon
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: regionName
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Weather data with forecast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeatherData"
+
+  /news:
+    get:
+      operationId: listNews
+      tags: [news]
+      summary: List commodity news and regulatory updates
+      parameters:
+        - in: query
+          name: commodity
+          schema:
+            type: string
+          description: Filter by commodity symbol (e.g. GOLD, OIL)
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of news articles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NewsArticle"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +173,273 @@ components:
       required:
         - status
 
+    Commodity:
+      type: object
+      required:
+        - id
+        - symbol
+        - name
+        - category
+        - unit
+        - price
+        - change
+        - changePercent
+        - high24h
+        - low24h
+        - lastUpdated
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          description: "metals | energy | agriculture | softs"
+        unit:
+          type: string
+          description: "e.g. USD/oz, USD/bbl, USD/bu"
+        price:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        high24h:
+          type: number
+        low24h:
+          type: number
+        lastUpdated:
+          type: string
+        currency:
+          type: string
+        description:
+          type: ["string", "null"]
+
+    PricePoint:
+      type: object
+      required:
+        - timestamp
+        - price
+      properties:
+        timestamp:
+          type: string
+        price:
+          type: number
+
+    CommodityDetail:
+      type: object
+      required:
+        - id
+        - symbol
+        - name
+        - category
+        - unit
+        - price
+        - change
+        - changePercent
+        - high24h
+        - low24h
+        - lastUpdated
+        - priceHistory
+        - regions
+      properties:
+        id:
+          type: string
+        symbol:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        unit:
+          type: string
+        price:
+          type: number
+        change:
+          type: number
+        changePercent:
+          type: number
+        high24h:
+          type: number
+        low24h:
+          type: number
+        lastUpdated:
+          type: string
+        currency:
+          type: string
+        description:
+          type: ["string", "null"]
+        priceHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/PricePoint"
+        regions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProductionRegion"
+
+    ProductionRegion:
+      type: object
+      required:
+        - id
+        - commodityId
+        - name
+        - country
+        - lat
+        - lon
+        - type
+        - shareOfWorld
+      properties:
+        id:
+          type: string
+        commodityId:
+          type: string
+        name:
+          type: string
+        country:
+          type: string
+        lat:
+          type: number
+        lon:
+          type: number
+        type:
+          type: string
+          description: "mine | oilfield | farm | reserve | refinery"
+        shareOfWorld:
+          type: number
+          description: Percentage of world production/reserves
+        annualOutput:
+          type: ["string", "null"]
+        outputUnit:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+
+    WeatherForecast:
+      type: object
+      required:
+        - date
+        - maxTemp
+        - minTemp
+        - condition
+        - precipitationChance
+      properties:
+        date:
+          type: string
+        maxTemp:
+          type: number
+        minTemp:
+          type: number
+        condition:
+          type: string
+        conditionCode:
+          type: integer
+        precipitationChance:
+          type: number
+        windSpeed:
+          type: number
+
+    WeatherData:
+      type: object
+      required:
+        - lat
+        - lon
+        - regionName
+        - temp
+        - humidity
+        - windSpeed
+        - condition
+        - conditionCode
+        - forecast
+      properties:
+        lat:
+          type: number
+        lon:
+          type: number
+        regionName:
+          type: string
+        temp:
+          type: number
+        feelsLike:
+          type: number
+        humidity:
+          type: number
+        windSpeed:
+          type: number
+        condition:
+          type: string
+        conditionCode:
+          type: integer
+        uvIndex:
+          type: number
+        visibility:
+          type: number
+        forecast:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeatherForecast"
+
+    NewsArticle:
+      type: object
+      required:
+        - id
+        - title
+        - summary
+        - source
+        - publishedAt
+        - url
+        - commodities
+        - sentiment
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        source:
+          type: string
+        publishedAt:
+          type: string
+        url:
+          type: string
+        commodities:
+          type: array
+          items:
+            type: string
+          description: Array of commodity IDs this article relates to
+        sentiment:
+          type: string
+          description: "positive | negative | neutral"
+        category:
+          type: ["string", "null"]
+          description: "regulatory | market | weather | geopolitical | supply"
+        imageUrl:
+          type: ["string", "null"]
+
+    MarketSummary:
+      type: object
+      required:
+        - totalCommodities
+        - gainersCount
+        - losersCount
+        - topGainer
+        - topLoser
+        - lastUpdated
+      properties:
+        totalCommodities:
+          type: integer
+        gainersCount:
+          type: integer
+        losersCount:
+          type: integer
+        topGainer:
+          $ref: "#/components/schemas/Commodity"
+        topLoser:
+          $ref: "#/components/schemas/Commodity"
+        lastUpdated:
+          type: string
+        totalMarketChange:
+          type: number
