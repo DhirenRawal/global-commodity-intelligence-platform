@@ -10,6 +10,7 @@
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "corepack pnpm run typecheck && corepack pnpm --filter @workspace/api-server run build && node --enable-source-maps artifacts/api-server/dist/static-export.mjs && PORT=23671 BASE_PATH=/ corepack pnpm --filter @workspace/commodities run build",
+    "build:pages": "corepack pnpm run typecheck && corepack pnpm --filter @workspace/api-server run build && node --enable-source-maps artifacts/api-server/dist/static-export.mjs && PORT=23671 BASE_PATH=/global-commodity-intelligence-platform/ VITE_STATIC_API=true corepack pnpm --filter @workspace/commodities run build && cp artifacts/commodities/dist/public/index.html artifacts/commodities/dist/public/404.html",
     "start": "sh -c 'PORT=${PORT:-23671} NODE_ENV=production node --enable-source-maps artifacts/api-server/dist/index.mjs'",
     "typecheck:libs": "tsc --build",
     "typecheck": "corepack pnpm run typecheck:libs && corepack pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

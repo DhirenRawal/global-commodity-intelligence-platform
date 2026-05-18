@@ -34,7 +34,10 @@ export function shouldPreferStaticApi(): boolean {
 
 async function loadStaticApi(): Promise<StaticApiSnapshot | null> {
   if (typeof window === "undefined") return null;
-  staticApiPromise ??= fetch(new URL("data/static-api.json", document.baseURI).toString(), {
+  const env = viteEnv();
+  const base = typeof env?.["BASE_URL"] === "string" ? env["BASE_URL"] : "/";
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
+  staticApiPromise ??= fetch(new URL(`${normalizedBase}data/static-api.json`, window.location.origin).toString(), {
     headers: { accept: "application/json" },
   })
     .then((response) => (response.ok ? response.json() as Promise<StaticApiSnapshot> : null))
