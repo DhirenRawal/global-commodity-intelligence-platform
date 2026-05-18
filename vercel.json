@@ -1,0 +1,19 @@
+{
+  "installCommand": "corepack pnpm install --frozen-lockfile",
+  "buildCommand": "corepack pnpm run build",
+  "outputDirectory": "artifacts/commodities/dist/public",
+  "rewrites": [
+    {
+      "source": "/map",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/news",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/commodity/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}
