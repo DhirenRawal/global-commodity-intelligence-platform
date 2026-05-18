@@ -1,3 +1,5 @@
+import { getStaticApiResponse, shouldPreferStaticApi } from "./static-api";
+
 export type CustomFetchOptions = RequestInit & {
   responseType?: "json" | "text" | "blob" | "auto";
 };
@@ -360,9 +362,22 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
+  if (method === "GET" && shouldPreferStaticApi()) {
+    const staticResponse = await getStaticApiResponse<T>(requestInfo.url);
+    if (staticResponse !== undefined) {
+      return staticResponse;
+    }
+  }
+
   const response = await fetch(input, { ...init, method, headers });
 
   if (!response.ok) {
+    if (method === "GET") {
+      const staticResponse = await getStaticApiResponse<T>(requestInfo.url);
+      if (staticResponse !== undefined) {
+        return staticResponse;
+      }
+    }
     const errorData = await parseErrorBody(response, method);
     throw new ApiError(response, errorData, requestInfo);
   }

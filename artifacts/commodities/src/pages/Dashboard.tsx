@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { useGetMarketSummary, useListCommodities, getGetMarketSummaryQueryKey, getListCommoditiesQueryKey } from "@workspace/api-client-react";
+import { apiGetJson, useGetMarketSummary, useListCommodities, getGetMarketSummaryQueryKey, getListCommoditiesQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Activity, AlertTriangle, ArrowUpRight, BarChart3, Database, Globe2, ShieldAlert, TrendingDown, TrendingUp, Zap } from "lucide-react";
@@ -83,9 +83,7 @@ export default function Dashboard() {
   const { data: intelligence, isLoading: loadingIntelligence } = useQuery<IntelligenceSnapshot>({
     queryKey: ["global-intelligence"],
     queryFn: async () => {
-      const response = await fetch("/api/commodities/intelligence");
-      if (!response.ok) throw new Error("Failed to load intelligence snapshot");
-      return response.json();
+      return apiGetJson<IntelligenceSnapshot>("/api/commodities/intelligence");
     },
     refetchInterval: 60000,
   });

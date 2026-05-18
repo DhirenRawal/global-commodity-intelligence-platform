@@ -7,6 +7,7 @@ import {
   useGetWeather,
   useListNews,
   useListRegions,
+  apiGetJson,
   getGetCommodityQueryKey,
   getGetWeatherQueryKey,
   getListNewsQueryKey,
@@ -580,18 +581,14 @@ export default function MapPage() {
   const { data: intelligence } = useQuery<Intelligence>({
     queryKey: ["commodity-intelligence", selectedCommodity],
     queryFn: async () => {
-      const response = await fetch(`/api/commodities/intelligence?commodity=${selectedCommodity}`);
-      if (!response.ok) throw new Error("Failed to load intelligence");
-      return response.json();
+      return apiGetJson<Intelligence>(`/api/commodities/intelligence?commodity=${selectedCommodity}`);
     },
   });
 
   const { data: simulation } = useQuery<SimulationResult>({
     queryKey: ["shock-simulation", scenarioId, selectedCommodity],
     queryFn: async () => {
-      const response = await fetch(`/api/commodities/simulate?scenario=${scenarioId}&commodity=${selectedCommodity}`);
-      if (!response.ok) throw new Error("Failed to simulate shock");
-      return response.json();
+      return apiGetJson<SimulationResult>(`/api/commodities/simulate?scenario=${scenarioId}&commodity=${selectedCommodity}`);
     },
   });
 

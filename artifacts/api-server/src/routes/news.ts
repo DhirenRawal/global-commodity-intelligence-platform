@@ -101,7 +101,7 @@ const CURATED_INTELLIGENCE: Record<string, Array<{
   ],
 };
 
-function curatedArticles(commodity: string, limit: number) {
+export function curatedArticles(commodity: string, limit: number) {
   return (CURATED_INTELLIGENCE[commodity] ?? []).slice(0, limit).map((item, index) => ({
     id: `curated-${commodity}-${index}`,
     title: item.title,

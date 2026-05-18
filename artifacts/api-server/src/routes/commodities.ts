@@ -7,7 +7,7 @@ const yahooFinance = new YahooFinance();
 
 const router = Router();
 
-const COMMODITIES = [
+export const COMMODITIES = [
   { id: "gold", symbol: "GC=F", name: "Gold", category: "metals", unit: "USD/oz", currency: "USD", description: "Precious metal used as a store of value and in electronics, jewelry, and dentistry." },
   { id: "silver", symbol: "SI=F", name: "Silver", category: "metals", unit: "USD/oz", currency: "USD", description: "Precious and industrial metal used in electronics, solar panels, jewelry, and currency." },
   { id: "platinum", symbol: "PL=F", name: "Platinum", category: "metals", unit: "USD/oz", currency: "USD", description: "Rare precious metal used in catalytic converters, jewelry, and fuel cells." },
