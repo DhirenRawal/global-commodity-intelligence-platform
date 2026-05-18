@@ -1,0 +1,19 @@
+{
+  "installCommand": "echo \"Skipping dependency install; using committed static bundle\"",
+  "buildCommand": "echo \"Using committed static bundle\"",
+  "outputDirectory": "vercel-static",
+  "rewrites": [
+    {
+      "source": "/map",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/news",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/commodity/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}
