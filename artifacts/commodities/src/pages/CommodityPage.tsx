@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import { useParams, Link } from "wouter";
-import { useGetCommodity, useGetWeather, useListNews, getGetCommodityQueryKey, getGetWeatherQueryKey, getListNewsQueryKey } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
+import { apiGetJson, useGetCommodity, useGetWeather, useListNews, getGetCommodityQueryKey, getGetWeatherQueryKey, getListNewsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, TrendingDown, ArrowLeft, MapPin, Cloud, Droplets, Wind, Thermometer, ExternalLink } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowLeft, MapPin, Droplets, Wind, ExternalLink, Database, GitBranch, ShieldAlert, BookOpen, AlertTriangle } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { type CommodityIntelligence, formatNumber, riskClass, sourceConfidence } from "@/lib/intelligence";
 
 const SENTIMENT_COLORS: Record<string, string> = {
   positive: "text-success border-success/30",
@@ -92,6 +94,12 @@ export default function CommodityPage() {
     { query: { queryKey: getListNewsQueryKey({ commodity: symbol, limit: 10 }), enabled: !!symbol } }
   );
 
+  const { data: intelligence } = useQuery<CommodityIntelligence>({
+    queryKey: ["commodity-page-intelligence", symbol],
+    queryFn: async () => apiGetJson<CommodityIntelligence>(`/api/commodities/intelligence?commodity=${symbol}`),
+    enabled: !!symbol,
+  });
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
@@ -121,6 +129,9 @@ export default function CommodityPage() {
 
   const priceMin = Math.min(...chartData.map(d => d.price)) * 0.998;
   const priceMax = Math.max(...chartData.map(d => d.price)) * 1.002;
+  const producers = intelligence?.producers.slice(0, 12) ?? [];
+  const baseline = intelligence?.baseline;
+  const coverage = intelligence?.coverage;
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -195,6 +206,137 @@ export default function CommodityPage() {
           </CardContent>
         </Card>
       </div>
+
+      {intelligence && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <Database className="h-3.5 w-3.5" /> Global Production
+              </div>
+              <div className="font-mono text-xl font-bold">{formatNumber(baseline?.globalProduction)}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{baseline?.unit} / {baseline?.source}</div>
+            </CardContent>
+          </Card>
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <ShieldAlert className="h-3.5 w-3.5" /> Tracked Coverage
+              </div>
+              <div className="font-mono text-xl font-bold">{coverage?.coveragePct ?? "-"}%</div>
+              <div className="mt-1 text-xs text-muted-foreground">Confidence {sourceConfidence(coverage?.coveragePct)}</div>
+            </CardContent>
+          </Card>
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <GitBranch className="h-3.5 w-3.5" /> Export Dependence
+              </div>
+              <div className="font-mono text-xl font-bold">{intelligence.analytics.exportDependencePct}%</div>
+              <div className="mt-1 text-xs text-muted-foreground">{formatNumber(baseline?.globalExports)} annual exports</div>
+            </CardContent>
+          </Card>
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <AlertTriangle className="h-3.5 w-3.5" /> Concentration
+              </div>
+              <div className="font-mono text-xl font-bold">{intelligence.analytics.concentrationIndex}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{intelligence.analytics.highRiskRegions} high-risk producer nodes</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {intelligence && (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <Card className="border-border bg-card">
+            <CardContent className="p-4">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-bold uppercase tracking-wider text-primary">Top Producers</div>
+                  <div className="mt-1 text-xs text-muted-foreground">Share uses global production baseline, not tracked-only totals</div>
+                </div>
+                <Badge variant="outline" className="border-border text-muted-foreground">{intelligence.analytics.marketShareFormula}</Badge>
+              </div>
+              <div className="overflow-hidden rounded border border-border">
+                <table className="w-full text-xs">
+                  <thead className="bg-secondary/45 text-muted-foreground">
+                    <tr className="uppercase tracking-wider">
+                      <th className="px-3 py-2 text-left">Rank</th>
+                      <th className="px-3 py-2 text-left">Region</th>
+                      <th className="px-3 py-2 text-right">Production</th>
+                      <th className="px-3 py-2 text-right">World Share</th>
+                      <th className="px-3 py-2 text-left">Risk</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {producers.map((producer) => (
+                      <tr key={producer.id} className="border-t border-border/60 hover:bg-secondary/25">
+                        <td className="px-3 py-2 font-mono text-muted-foreground">#{producer.exportRank}</td>
+                        <td className="px-3 py-2">
+                          <div className="font-bold text-foreground">{producer.country}</div>
+                          <div className="text-[10px] text-muted-foreground">{producer.name}</div>
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono">{formatNumber(producer.production)} {producer.outputUnit}</td>
+                        <td className="px-3 py-2 text-right font-mono text-primary">{producer.shareOfWorld.toFixed(2)}%</td>
+                        <td className="px-3 py-2">
+                          <div className="flex flex-wrap gap-1">
+                            <Badge variant="outline" className={`px-1 py-0 text-[10px] ${riskClass(producer.geopoliticalRisk)}`}>P {producer.geopoliticalRisk}</Badge>
+                            <Badge variant="outline" className={`px-1 py-0 text-[10px] ${riskClass(producer.climateRisk)}`}>C {producer.climateRisk}</Badge>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-4">
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary">
+                  <ShieldAlert className="h-4 w-4" /> Risk Analysis
+                </div>
+                <div className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+                  <div className="rounded border border-border bg-secondary/25 p-3">
+                    <div className="mb-1 font-bold text-foreground">Largest risk node</div>
+                    {intelligence.analytics.largestRisk?.country} / {intelligence.analytics.largestRisk?.name}. {intelligence.analytics.largestRisk?.priceCorrelation}
+                  </div>
+                  {intelligence.dependencies.length ? intelligence.dependencies.map((risk) => (
+                    <div key={risk.title} className="rounded border border-border bg-secondary/25 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-foreground">{risk.title}</span>
+                        <span className="font-mono text-primary">{risk.concentration}%</span>
+                      </div>
+                      <div className="mt-1">{risk.note}</div>
+                    </div>
+                  )) : (
+                    <div className="rounded border border-border bg-secondary/25 p-3">No single dependency risk dominates the current model.</div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card">
+              <CardContent className="p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary">
+                  <BookOpen className="h-4 w-4" /> Methodology
+                </div>
+                <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
+                  <div>Source: {baseline?.source}</div>
+                  <div>Updated: {baseline?.lastUpdated}</div>
+                  <div>Confidence: {sourceConfidence(coverage?.coveragePct)}</div>
+                  <div>Conversion factor: {baseline?.priceMultiplier.toLocaleString()} native units to pricing units.</div>
+                  <div>Market share formula: {intelligence.analytics.marketShareFormula}.</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {commodity.regions && commodity.regions.length > 0 && (
         <div>

@@ -12,6 +12,14 @@
       "destination": "/index.html"
     },
     {
+      "source": "/compare",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/methodology",
+      "destination": "/index.html"
+    },
+    {
       "source": "/commodity/:path*",
       "destination": "/index.html"
     }

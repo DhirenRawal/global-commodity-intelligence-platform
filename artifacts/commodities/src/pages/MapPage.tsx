@@ -62,12 +62,14 @@ const COMMODITIES_LIST = [
   { id: "cotton", name: "Cotton", group: "Softs" },
 ];
 
-const MAP_MODES = ["marker", "heatmap", "choropleth", "satellite", "terrain"] as const;
-const REGIONS = ["All", "North America", "South America", "Africa", "Europe", "Middle East", "Asia-Pacific"] as const;
-const RISK_FILTERS = ["All", "High climate risk", "High geopolitical risk", "High sanctions exposure", "Export dependency"] as const;
+const MAP_MODES = ["marker", "heatmap", "choropleth", "trade-flow", "risk", "weather", "satellite", "terrain"] as const;
+const REGIONS = ["North America", "South America", "Africa", "Europe", "Middle East", "Asia-Pacific"] as const;
+const RISK_FILTERS = ["High climate risk", "High geopolitical risk", "High sanctions exposure", "Export dependency"] as const;
+const PANEL_TABS = ["Overview", "Production", "Risk", "Weather", "Trade", "News", "Methodology"] as const;
 
 type MapMode = (typeof MAP_MODES)[number];
 type RiskFilter = (typeof RISK_FILTERS)[number];
+type PanelTab = (typeof PANEL_TABS)[number];
 
 type HistoryPoint = { year: number; production: number; event?: string | null };
 
@@ -323,6 +325,8 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
     { query: { queryKey: getListNewsQueryKey({ commodity: region.commodityId, limit: 5 }) } },
   );
   const productionNow = productionAtYear(region, year);
+  const [activeTab, setActiveTab] = useState<PanelTab>("Overview");
+  const show = (tabs: PanelTab[]) => tabs.includes(activeTab);
 
   return (
     <div className="absolute inset-x-0 bottom-0 z-[1000] max-h-[82vh] overflow-y-auto border-t border-border bg-card/98 shadow-2xl backdrop-blur md:inset-y-0 md:left-auto md:right-0 md:h-full md:w-[420px] md:border-l md:border-t-0">
@@ -340,14 +344,26 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
       </div>
 
       <div className="space-y-4 p-4">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex gap-1 overflow-x-auto border-b border-border pb-3">
+          {PANEL_TABS.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`shrink-0 rounded border px-2.5 py-1.5 text-[11px] transition-colors ${activeTab === tab ? "border-primary bg-primary text-primary-foreground" : "border-border bg-secondary/25 text-muted-foreground hover:text-foreground"}`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {show(["Overview", "Production"]) && <div className="grid grid-cols-2 gap-2">
           <StatBox label={`Production ${year}`} value={formatNumber(productionNow)} detail={region.outputUnit} />
           <StatBox label="World Share" value={`${region.shareOfWorld.toFixed(2)}%`} detail="Global baseline denominator" />
           <StatBox label="Reserves" value={formatNumber(region.reserves)} detail={region.outputUnit} />
           <StatBox label="Export Rank" value={`#${region.exportRank ?? "-"}`} detail={`${region.exportShare?.toFixed(1) ?? "-"}% export proxy`} />
-        </div>
+        </div>}
 
-        <div className="rounded border border-border bg-secondary/25 p-3">
+        {show(["Overview", "Production"]) && <div className="rounded border border-border bg-secondary/25 p-3">
           <div className="mb-2 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <BarChart3 className="h-3.5 w-3.5" /> Historical Production
@@ -355,32 +371,32 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
             <Badge variant="outline" className="text-[10px]">{region.productionTrend ?? "flat"}</Badge>
           </div>
           <Sparkline points={region.historicalProduction} color={color} />
-        </div>
+        </div>}
 
-        <div className="grid grid-cols-3 gap-2">
+        {show(["Overview", "Risk"]) && <div className="grid grid-cols-3 gap-2">
           <Badge variant="outline" className={`justify-center py-1 ${riskClass(region.geopoliticalRisk)}`}>Political {region.geopoliticalRisk}</Badge>
           <Badge variant="outline" className={`justify-center py-1 ${riskClass(region.climateRisk)}`}>Climate {region.climateRisk}</Badge>
           <Badge variant="outline" className={`justify-center py-1 ${riskClass(region.sanctionsExposure)}`}>Sanctions {region.sanctionsExposure}</Badge>
-        </div>
+        </div>}
 
-        <div className="rounded border border-border bg-secondary/25 p-3 text-xs leading-relaxed text-muted-foreground">
+        {show(["Overview", "Risk"]) && <div className="rounded border border-border bg-secondary/25 p-3 text-xs leading-relaxed text-muted-foreground">
           <div className="mb-2 flex items-center gap-2 font-bold uppercase tracking-wider text-foreground">
             <ShieldAlert className="h-3.5 w-3.5" style={{ color }} /> Risk Transmission
           </div>
           <div>{region.description}</div>
           <div className="mt-3 text-foreground">{region.priceCorrelation}</div>
-        </div>
+        </div>}
 
-        <div className="rounded border border-border bg-secondary/25 p-3">
+        {show(["Overview", "Trade"]) && <div className="rounded border border-border bg-secondary/25 p-3">
           <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Major Export Destinations</div>
           <div className="flex flex-wrap gap-1.5">
             {region.exportDestinations?.map((destination) => (
               <Badge key={destination} variant="outline" className="border-border text-muted-foreground">{destination}</Badge>
             ))}
           </div>
-        </div>
+        </div>}
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {show(["Overview", "Weather", "Methodology"]) && <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div className="rounded border border-border bg-secondary/25 p-3">
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <Cloud className="h-3.5 w-3.5" /> Weather Risk
@@ -407,9 +423,9 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
             <div className="text-xs text-foreground">{region.source}</div>
             <div className="mt-1 text-xs text-muted-foreground">Updated {region.lastUpdated}</div>
           </div>
-        </div>
+        </div>}
 
-        <div className="rounded border border-border bg-secondary/25 p-3">
+        {show(["Overview", "News"]) && <div className="rounded border border-border bg-secondary/25 p-3">
           <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
             <Newspaper className="h-3.5 w-3.5" /> Commodity-Aware News
           </div>
@@ -428,9 +444,9 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
-        {intelligence?.dependencies?.length ? (
+        {show(["Overview", "Trade", "Risk"]) && intelligence?.dependencies?.length ? (
           <div className="rounded border border-border bg-secondary/25 p-3">
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <GitBranch className="h-3.5 w-3.5" /> Dependency Analysis
@@ -446,6 +462,16 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
             ))}
           </div>
         ) : null}
+
+        {show(["Methodology"]) && (
+          <div className="rounded border border-border bg-secondary/25 p-3 text-xs leading-relaxed text-muted-foreground">
+            <div className="mb-2 font-bold uppercase tracking-wider text-foreground">Calculation Method</div>
+            <div>World share = producer production / global production baseline * 100.</div>
+            <div className="mt-2">Global baseline: {formatNumber(region.globalProduction)} {region.outputUnit}</div>
+            <div className="mt-2">Source: {region.source}</div>
+            <div>Updated: {region.lastUpdated}</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -560,13 +586,17 @@ export default function MapPage() {
   const [selectedCommodity, setSelectedCommodity] = useState<string>("gold");
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
   const [mapMode, setMapMode] = useState<MapMode>("marker");
-  const [selectedGroup, setSelectedGroup] = useState<string>("All");
-  const [selectedMacroRegion, setSelectedMacroRegion] = useState<string>("All");
-  const [riskFilter, setRiskFilter] = useState<RiskFilter>("All");
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [selectedMacroRegions, setSelectedMacroRegions] = useState<string[]>([]);
+  const [riskFilters, setRiskFilters] = useState<RiskFilter[]>([]);
   const [year, setYear] = useState(2026);
   const [showFlows, setShowFlows] = useState(true);
   const [zoom, setZoom] = useState(2);
   const [scenarioId, setScenarioId] = useState("russia-sanctions");
+
+  function toggleFilter<T extends string>(value: T, current: T[], setter: (next: T[]) => void) {
+    setter(current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
+  }
 
   const { data: regionsRaw, isLoading } = useListRegions(
     selectedCommodity ? { commodityId: selectedCommodity } : undefined,
@@ -595,19 +625,20 @@ export default function MapPage() {
   const filteredRegions = useMemo(() => {
     return regions.filter((region) => {
       const meta = commodityMeta(region.commodityId);
-      if (selectedGroup !== "All" && meta.group !== selectedGroup) return false;
-      if (selectedMacroRegion !== "All" && region.macroRegion !== selectedMacroRegion) return false;
-      if (riskFilter === "High climate risk" && region.climateRisk !== "high") return false;
-      if (riskFilter === "High geopolitical risk" && region.geopoliticalRisk !== "high") return false;
-      if (riskFilter === "High sanctions exposure" && region.sanctionsExposure !== "high") return false;
-      if (riskFilter === "Export dependency" && region.supplyChainDependence !== "critical") return false;
+      if (selectedGroups.length && !selectedGroups.includes(meta.group)) return false;
+      if (selectedMacroRegions.length && !selectedMacroRegions.includes(region.macroRegion ?? "Other")) return false;
+      if (riskFilters.includes("High climate risk") && region.climateRisk !== "high") return false;
+      if (riskFilters.includes("High geopolitical risk") && region.geopoliticalRisk !== "high") return false;
+      if (riskFilters.includes("High sanctions exposure") && region.sanctionsExposure !== "high") return false;
+      if (riskFilters.includes("Export dependency") && region.supplyChainDependence !== "critical") return false;
       return true;
     });
-  }, [regions, riskFilter, selectedGroup, selectedMacroRegion]);
+  }, [regions, riskFilters, selectedGroups, selectedMacroRegions]);
 
   const renderedRegions = useMemo(() => buildClusters(filteredRegions, zoom, year), [filteredRegions, zoom, year]);
   const flows = intelligence?.flows ?? [];
   const color = colorForCommodity(selectedCommodity);
+  const flowsVisible = showFlows || mapMode === "trade-flow";
   const tile =
     mapMode === "satellite"
       ? {
@@ -646,17 +677,37 @@ export default function MapPage() {
               );
             })}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select value={selectedGroup} onChange={(event) => setSelectedGroup(event.target.value)} className="rounded border border-border bg-background px-2 py-1.5 text-xs outline-none">
-              <option>All</option>
-              {Object.keys(CATEGORY_COLORS).map((group) => <option key={group}>{group}</option>)}
-            </select>
-            <select value={selectedMacroRegion} onChange={(event) => setSelectedMacroRegion(event.target.value)} className="rounded border border-border bg-background px-2 py-1.5 text-xs outline-none">
-              {REGIONS.map((region) => <option key={region}>{region}</option>)}
-            </select>
-            <select value={riskFilter} onChange={(event) => setRiskFilter(event.target.value as RiskFilter)} className="rounded border border-border bg-background px-2 py-1.5 text-xs outline-none">
-              {RISK_FILTERS.map((risk) => <option key={risk}>{risk}</option>)}
-            </select>
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <button onClick={() => { setSelectedGroups([]); setSelectedMacroRegions([]); setRiskFilters([]); }} className="rounded border border-border bg-secondary/25 px-2.5 py-1.5 text-muted-foreground transition-colors hover:text-foreground">
+              Clear filters
+            </button>
+            {Object.keys(CATEGORY_COLORS).map((group) => (
+              <button
+                key={group}
+                onClick={() => toggleFilter(group, selectedGroups, setSelectedGroups)}
+                className={`rounded border px-2.5 py-1.5 transition-colors ${selectedGroups.includes(group) ? "border-primary bg-primary text-primary-foreground" : "border-border bg-secondary/25 text-muted-foreground hover:text-foreground"}`}
+              >
+                {group}
+              </button>
+            ))}
+            {REGIONS.map((region) => (
+              <button
+                key={region}
+                onClick={() => toggleFilter(region, selectedMacroRegions, setSelectedMacroRegions)}
+                className={`rounded border px-2.5 py-1.5 transition-colors ${selectedMacroRegions.includes(region) ? "border-primary/70 text-primary" : "border-border bg-secondary/25 text-muted-foreground hover:text-foreground"}`}
+              >
+                {region}
+              </button>
+            ))}
+            {RISK_FILTERS.map((risk) => (
+              <button
+                key={risk}
+                onClick={() => toggleFilter(risk, riskFilters, setRiskFilters)}
+                className={`rounded border px-2.5 py-1.5 transition-colors ${riskFilters.includes(risk) ? "border-destructive/60 text-destructive" : "border-border bg-secondary/25 text-muted-foreground hover:text-foreground"}`}
+              >
+                {risk}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -668,7 +719,7 @@ export default function MapPage() {
                 {mode}
               </button>
             ))}
-            <button onClick={() => setShowFlows(!showFlows)} className={`ml-2 inline-flex items-center gap-1 rounded border px-3 py-1.5 text-xs transition-colors ${showFlows ? "border-primary/70 text-primary" : "border-border text-muted-foreground"}`}>
+            <button onClick={() => setShowFlows(!showFlows)} className={`ml-2 inline-flex items-center gap-1 rounded border px-3 py-1.5 text-xs transition-colors ${flowsVisible ? "border-primary/70 text-primary" : "border-border text-muted-foreground"}`}>
               <GitBranch className="h-3.5 w-3.5" /> Flows
             </button>
           </div>
@@ -695,15 +746,25 @@ export default function MapPage() {
         <MapContainer center={[18, 10]} zoom={2} style={{ height: "100%", width: "100%", minHeight: "620px" }} className="z-0">
           <ZoomBridge onZoom={setZoom} />
           <TileLayer url={tile.url} attribution={tile.attribution} />
-          {showFlows && <FlowLayer flows={flows} />}
+          {flowsVisible && <FlowLayer flows={flows} />}
           {renderedRegions.map((region) => {
-            const markerColor = region.count ? "#f8fafc" : colorForCommodity(region.commodityId);
+            const baseColor = region.count ? "#f8fafc" : colorForCommodity(region.commodityId);
+            const riskColor = (region.riskScore ?? 0) > 70 ? "#ef4444" : (region.riskScore ?? 0) > 50 ? "#F5A623" : "#22c55e";
+            const weatherColor = region.climateRisk === "high" ? "#38bdf8" : region.climateRisk === "medium" ? "#F5A623" : "#22c55e";
+            const markerColor = mapMode === "risk" || mapMode === "choropleth" ? riskColor : mapMode === "weather" ? weatherColor : baseColor;
             const production = productionAtYear(region, year);
             const productionScale = region.globalProduction ? (production / region.globalProduction) * 100 : region.shareOfWorld;
             const heatRadius = Math.min(44, 12 + productionScale * 2.2);
             const markerRadius = region.count ? Math.min(12 + region.count * 1.5, 28) : Math.min(7 + region.shareOfWorld / 2.4, 18);
-            const radius = mapMode === "heatmap" ? heatRadius : mapMode === "choropleth" ? Math.min(20 + (region.riskScore ?? 20) / 2, 58) : markerRadius;
-            const opacity = mapMode === "heatmap" ? 0.28 : mapMode === "choropleth" ? 0.18 : 0.78;
+            const radius =
+              mapMode === "heatmap"
+                ? heatRadius
+                : mapMode === "choropleth" || mapMode === "risk"
+                ? Math.min(18 + (region.riskScore ?? 20) / 2, 58)
+                : mapMode === "weather"
+                ? Math.min(12 + (region.climateRisk === "high" ? 18 : region.climateRisk === "medium" ? 10 : 4), 34)
+                : markerRadius;
+            const opacity = mapMode === "heatmap" ? 0.28 : mapMode === "choropleth" || mapMode === "risk" || mapMode === "weather" ? 0.22 : 0.78;
             return (
               <CircleMarker
                 key={region.id}
@@ -711,7 +772,7 @@ export default function MapPage() {
                 radius={radius}
                 pathOptions={{
                   color: markerColor,
-                  fillColor: mapMode === "choropleth" ? (region.riskScore ?? 0) > 70 ? "#ef4444" : (region.riskScore ?? 0) > 50 ? "#F5A623" : "#22c55e" : markerColor,
+                  fillColor: markerColor,
                   fillOpacity: selectedRegion?.id === region.id ? 0.95 : opacity,
                   weight: selectedRegion?.id === region.id ? 3 : 1.4,
                 }}

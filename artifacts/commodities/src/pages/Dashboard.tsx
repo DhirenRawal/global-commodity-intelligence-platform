@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGetJson, useGetMarketSummary, useListCommodities, getGetMarketSummaryQueryKey, getListCommoditiesQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Activity, AlertTriangle, ArrowUpRight, BarChart3, Database, Globe2, ShieldAlert, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { Activity, AlertTriangle, ArrowUpRight, BarChart3, Clock, Database, Download, FileText, Globe2, ShieldAlert, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import { csvEscape, downloadTextFile, sourceConfidence } from "@/lib/intelligence";
 
 type TerminalCard = {
   id: string;
@@ -41,6 +42,7 @@ type IntelligenceSnapshot = {
       highRiskRegions: number;
       supplyDemandImbalance: number;
       exportDependencePct: number;
+      trackedCoveragePct: number;
     };
   }>;
 };
@@ -102,6 +104,48 @@ export default function Dashboard() {
   const criticalCoverage = intelligence?.coverage.filter((item) => item.warning).slice(0, 4) ?? [];
   const riskLeaders = [...(intelligence?.commodities ?? [])].sort((a, b) => b.analytics.highRiskRegions - a.analytics.highRiskRegions).slice(0, 6);
   const concentrationLeaders = [...(intelligence?.commodities ?? [])].sort((a, b) => b.analytics.concentrationIndex - a.analytics.concentrationIndex).slice(0, 6);
+  const averageCoverage = intelligence?.coverage.length
+    ? intelligence.coverage.reduce((sum, item) => sum + item.coveragePct, 0) / intelligence.coverage.length
+    : 0;
+
+  function exportTerminalCsv() {
+    const headers = ["commodity", "symbol", "price", "changePct", "concentrationIndex", "highRiskNodes", "supplyDemandImbalance", "trackedCoveragePct"];
+    const rows = (commodities ?? []).map((commodity) => {
+      const intel = intelligence?.commodities.find((item) => item.id === commodity.id);
+      return [
+        commodity.name,
+        commodity.symbol,
+        commodity.price,
+        commodity.changePercent,
+        intel?.analytics.concentrationIndex ?? "",
+        intel?.analytics.highRiskRegions ?? "",
+        intel?.analytics.supplyDemandImbalance ?? "",
+        intel?.analytics.trackedCoveragePct ?? "",
+      ].map(csvEscape).join(",");
+    });
+    downloadTextFile("global-commodity-terminal.csv", [headers.join(","), ...rows].join("\n"), "text/csv;charset=utf-8");
+  }
+
+  function generateRiskReport() {
+    const lines = [
+      "Global Commodity Intelligence Platform Risk Report",
+      `Generated: ${new Date().toLocaleString()}`,
+      "",
+      "Top structural risks:",
+      ...(intelligence?.terminalCards.map((card) => `- ${card.label}: ${card.value}. ${card.detail}`) ?? []),
+      "",
+      "Coverage warnings:",
+      ...(criticalCoverage.length ? criticalCoverage.map((item) => `- ${item.commodityId}: ${item.warning}`) : ["- No severe coverage warnings in current snapshot."]),
+      "",
+      "Strategic dependencies:",
+      ...(intelligence?.dependencies.map((risk) => `- ${risk.title}: ${risk.region}, ${risk.concentration}% concentration. ${risk.note}`) ?? []),
+      "",
+      "Methodology:",
+      "Market share = producer production / global production baseline * 100.",
+      "Production value = production * conversion factor * quoted price.",
+    ];
+    downloadTextFile("global-commodity-risk-report.txt", lines.join("\n"));
+  }
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-5 p-4 md:p-6">
@@ -115,12 +159,20 @@ export default function Dashboard() {
             Production baselines, live futures, supply concentration, geopolitical exposure, climate risk, trade-flow dependencies, and scenario analytics in one command surface.
           </p>
         </div>
-        <div className="flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-          </span>
-          Live prices / Static public baselines / May 2026 model
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={exportTerminalCsv} className="inline-flex items-center gap-2 rounded border border-border bg-secondary/35 px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/45 hover:text-foreground">
+            <Download className="h-3.5 w-3.5" /> CSV
+          </button>
+          <button onClick={generateRiskReport} className="inline-flex items-center gap-2 rounded border border-border bg-secondary/35 px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/45 hover:text-foreground">
+            <FileText className="h-3.5 w-3.5" /> Risk Report
+          </button>
+          <div className="flex items-center gap-3 rounded border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+            </span>
+            Live prices / Static public baselines / May 2026 model
+          </div>
         </div>
       </header>
 
@@ -131,6 +183,13 @@ export default function Dashboard() {
         <KpiCard title="Top Gainer" value={summary?.topGainer?.symbol ?? "-"} detail={`${summary?.topGainer?.name ?? ""} ${summary?.topGainer?.changePercent?.toFixed(2) ?? "-"}%`} icon={<ArrowUpRight className="h-4 w-4" />} />
         <KpiCard title="Market Breadth" value={`${summary?.totalMarketChange?.toFixed(2) ?? "-"}%`} detail="Average live move across commodity futures proxies" icon={<Activity className="h-4 w-4" />} />
       </div>
+
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <KpiCard title="Data Confidence" value={sourceConfidence(averageCoverage)} detail={`${averageCoverage.toFixed(1)}% average tracked producer coverage`} icon={<ShieldAlert className="h-4 w-4" />} />
+        <KpiCard title="Price Feed" value="Delayed" detail="Static deployments use bundled futures proxies when live quotes are unavailable" icon={<Clock className="h-4 w-4" />} />
+        <KpiCard title="Weather Layer" value="Hybrid" detail="Live weather if API is available, deterministic fallback in static public mode" icon={<Globe2 className="h-4 w-4" />} />
+        <KpiCard title="Exports" value="Ready" detail="CSV terminal export and downloadable risk report are available from the header" icon={<Download className="h-4 w-4" />} />
+      </section>
 
       <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {intelligence?.terminalCards.map((card) => (

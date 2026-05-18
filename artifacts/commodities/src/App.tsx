@@ -8,6 +8,8 @@ import Dashboard from "@/pages/Dashboard";
 import MapPage from "@/pages/MapPage";
 import CommodityPage from "@/pages/CommodityPage";
 import NewsPage from "@/pages/NewsPage";
+import ComparePage from "@/pages/ComparePage";
+import MethodologyPage from "@/pages/MethodologyPage";
 
 const queryClient = new QueryClient();
 
@@ -17,7 +19,9 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/map" component={MapPage} />
       <Route path="/commodity/:symbol" component={CommodityPage} />
+      <Route path="/compare" component={ComparePage} />
       <Route path="/news" component={NewsPage} />
+      <Route path="/methodology" component={MethodologyPage} />
       <Route component={NotFound} />
     </Switch>
   );
