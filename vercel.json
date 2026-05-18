@@ -1,7 +1,7 @@
 {
-  "installCommand": "corepack pnpm install --no-frozen-lockfile",
-  "buildCommand": "corepack pnpm run build",
-  "outputDirectory": "artifacts/commodities/dist/public",
+  "installCommand": "echo \"Skipping dependency install; using committed static bundle\"",
+  "buildCommand": "echo \"Using committed static bundle\"",
+  "outputDirectory": "vercel-static",
   "rewrites": [
     {
       "source": "/map",
