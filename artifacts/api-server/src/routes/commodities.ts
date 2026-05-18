@@ -1,6 +1,7 @@
 import { Router } from "express";
 import YahooFinance from "yahoo-finance2";
 import { logger } from "../lib/logger";
+import { getCommodityIntelligence, getGlobalIntelligence, simulateShock } from "../data/intelligence";
 
 const yahooFinance = new YahooFinance();
 
@@ -126,6 +127,20 @@ router.get("/summary", async (req, res) => {
   });
 });
 
+router.get("/intelligence", (req, res) => {
+  const { commodity } = req.query as { commodity?: string };
+  if (commodity) {
+    res.json(getCommodityIntelligence(commodity.toLowerCase()));
+    return;
+  }
+  res.json(getGlobalIntelligence());
+});
+
+router.get("/simulate", (req, res) => {
+  const { scenario, commodity } = req.query as { scenario?: string; commodity?: string };
+  res.json(simulateShock(scenario ?? "russia-sanctions", commodity?.toLowerCase()));
+});
+
 router.get("/:symbol", async (req, res) => {
   const { symbol } = req.params;
   const commodity = COMMODITIES.find(
@@ -153,7 +168,7 @@ router.get("/:symbol", async (req, res) => {
       period1: startDate.toISOString().split("T")[0],
       period2: endDate.toISOString().split("T")[0],
       interval: "1d",
-    }, { validateResult: false });
+    }, { validateResult: false }) as { quotes?: Record<string, unknown>[] };
     priceHistory = (historical?.quotes ?? []).map((p: Record<string, unknown>) => ({
       timestamp: p.date instanceof Date ? p.date.toISOString() : new Date().toISOString(),
       price: (p.close as number | undefined) ?? 0,

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: global-commodity-intelligence-platform
+    env: node
+    plan: starter
+    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm run build
+    startCommand: corepack pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"

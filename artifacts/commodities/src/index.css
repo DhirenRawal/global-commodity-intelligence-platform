@@ -135,3 +135,16 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+.trade-flow-line {
+  animation: trade-flow-dash 1.8s linear infinite;
+}
+
+@keyframes trade-flow-dash {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

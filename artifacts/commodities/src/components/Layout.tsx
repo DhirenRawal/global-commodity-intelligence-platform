@@ -45,12 +45,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <aside className="w-16 md:w-64 border-r border-border bg-sidebar flex flex-col shrink-0">
           <div className="h-14 flex items-center justify-center md:justify-start px-4 border-b border-border">
             <Activity className="h-6 w-6 text-primary" />
-            <span className="ml-3 font-bold text-lg hidden md:block uppercase tracking-wider text-primary">NEXUS</span>
+            <span className="ml-3 font-bold text-lg hidden md:block uppercase tracking-wider text-primary">PULSE</span>
           </div>
           <nav className="flex-1 py-4 flex flex-col space-y-2 px-2">
-            <NavItem href="/" icon={<BarChart3 />} label="Dashboard" active={location === "/"} />
-            <NavItem href="/map" icon={<MapIcon />} label="Global Map" active={location === "/map"} />
-            <NavItem href="/news" icon={<Newspaper />} label="News Feed" active={location === "/news"} />
+            <NavItem href="/" icon={<BarChart3 />} label="Macro Terminal" active={location === "/"} />
+            <NavItem href="/map" icon={<MapIcon />} label="Global Intelligence Map" active={location === "/map"} />
+            <NavItem href="/news" icon={<Newspaper />} label="Commodity News" active={location === "/news"} />
           </nav>
         </aside>
 
@@ -76,10 +76,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function NavItem({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active: boolean }) {
+function NavItem({ href, icon, label, active }: { href: string; icon: React.ReactElement<{ className?: string }>; label: string; active: boolean }) {
   return (
     <Link href={href} className={`flex items-center space-x-3 px-3 py-2 rounded-md transition-colors ${active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
-      <div className="shrink-0">{React.cloneElement(icon as React.ReactElement, { className: "h-5 w-5" })}</div>
+      <div className="shrink-0">{React.cloneElement(icon, { className: "h-5 w-5" })}</div>
       <span className="hidden md:block">{label}</span>
     </Link>
   );
