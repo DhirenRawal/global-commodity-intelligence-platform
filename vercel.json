@@ -1,4 +1,5 @@
 {
+  "installCommand": "corepack pnpm install --no-frozen-lockfile",
   "buildCommand": "corepack pnpm run build",
   "outputDirectory": "artifacts/commodities/dist/public",
   "rewrites": [
