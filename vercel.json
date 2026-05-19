@@ -16,6 +16,30 @@
       "destination": "/index.html"
     },
     {
+      "source": "/risk",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/sanctions",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/flows",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/simulator",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/alerts",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/reports",
+      "destination": "/index.html"
+    },
+    {
       "source": "/methodology",
       "destination": "/index.html"
     },

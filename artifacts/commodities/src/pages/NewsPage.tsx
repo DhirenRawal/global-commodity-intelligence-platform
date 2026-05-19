@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { ConfidenceBadge, NewsImpactBadge } from "@/components/institutional/Badges";
 
 const COMMODITIES = [
   { id: "gold", name: "Gold" },
@@ -93,11 +94,19 @@ export default function NewsPage() {
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="text-2xl mb-3">—</div>
             <div className="font-bold mb-1">No articles found</div>
-            <div className="text-sm text-muted-foreground">Try adjusting your filters or check back later</div>
+            <div className="text-sm text-muted-foreground">No highly relevant commodity news found for this filter in the current reference feed.</div>
           </div>
         ) : (
           <div className="space-y-3 max-w-4xl mx-auto">
-            {filtered.map((article) => (
+            {filtered.map((article) => {
+              const extra = article as typeof article & {
+                relevanceScore?: number;
+                regionRelevance?: string;
+                marketImpact?: string;
+                confidence?: string;
+                driver?: string;
+              };
+              return (
               <a key={article.id} href={article.url} target="_blank" rel="noopener noreferrer" className="block group">
                 <Card className="bg-card border-border group-hover:border-primary/30 transition-all group-hover:bg-card/80">
                   <CardContent className="p-4">
@@ -128,6 +137,14 @@ export default function NewsPage() {
                               {c}
                             </Badge>
                           ))}
+                          <NewsImpactBadge impact={extra.marketImpact} />
+                          <ConfidenceBadge confidence={extra.confidence ?? "Medium"} className="px-1.5 py-0 text-xs" />
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 text-primary border-primary/30">
+                            Relevance {extra.relevanceScore ?? 80}%
+                          </Badge>
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 text-muted-foreground">
+                            {extra.driver ?? "Market"} / {extra.regionRelevance ?? "Global"}
+                          </Badge>
                         </div>
                       </div>
                       <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5 group-hover:text-primary transition-colors" />
@@ -135,7 +152,7 @@ export default function NewsPage() {
                   </CardContent>
                 </Card>
               </a>
-            ))}
+            );})}
           </div>
         )}
       </div>

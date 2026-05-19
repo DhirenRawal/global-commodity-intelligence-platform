@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { COMMODITIES } from "./routes/commodities";
-import { COMMODITY_META, COVERAGE, REGIONS } from "./routes/regions";
+import { COVERAGE, REGIONS } from "./routes/regions";
 import { curatedArticles } from "./routes/news";
 import { getCommodityIntelligence, getGlobalIntelligence, simulateShock } from "./data/intelligence";
 
@@ -99,9 +99,10 @@ async function main() {
   );
   const allNews = Object.values(newsByCommodity).flat().slice(0, 50);
 
+  const globalIntelligence = getGlobalIntelligence();
   const payload = {
     generatedAt: "2026-05-18T00:00:00.000Z",
-    baselines: COMMODITY_META,
+    baselines: globalIntelligence.baselines,
     commodities,
     commodityDetails,
     summary,
@@ -118,7 +119,7 @@ async function main() {
       byCommodity: newsByCommodity,
     },
     intelligence: {
-      global: getGlobalIntelligence(),
+      global: globalIntelligence,
       byCommodity: intelligenceByCommodity,
     },
     simulations,

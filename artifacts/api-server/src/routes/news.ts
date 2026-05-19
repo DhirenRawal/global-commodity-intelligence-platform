@@ -11,7 +11,6 @@ const parser = new Parser({
 const RSS_FEEDS = [
   { url: "https://feeds.content.dowjones.io/public/rss/mw_marketpulse", source: "MarketWatch" },
   { url: "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147", source: "CNBC Economy" },
-  { url: "https://feeds.feedburner.com/businessinsider", source: "Business Insider" },
   { url: "https://rss.app/feeds/GCvHWjHSVWk5JXsH.xml", source: "Reuters Commodities" },
   { url: "https://www.agriculture.com/feeds/news-markets", source: "Agriculture.com" },
 ];
@@ -41,6 +40,14 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   weather: ["drought", "flood", "hurricane", "typhoon", "frost", "el nino", "la nina", "rainfall", "temperature", "climate", "storm"],
   supply: ["supply", "shortage", "surplus", "inventory", "stockpile", "production", "output", "harvest", "yield", "mine"],
   market: ["price", "market", "trading", "futures", "rally", "slump", "demand", "forecast", "outlook", "analysis"],
+};
+
+const CATEGORY_DRIVER: Record<string, string> = {
+  regulatory: "Policy",
+  geopolitical: "Sanctions / geopolitical",
+  weather: "Weather",
+  supply: "Supply",
+  market: "Demand / inventory",
 };
 
 const CURATED_INTELLIGENCE: Record<string, Array<{
@@ -112,8 +119,26 @@ export function curatedArticles(commodity: string, limit: number) {
     commodities: [commodity],
     sentiment: item.sentiment,
     category: item.category,
+    relevanceScore: item.category === "weather" || item.category === "geopolitical" ? 94 : 88,
+    regionRelevance: inferRegion(item.title, item.summary),
+    marketImpact: item.sentiment === "positive" ? "Bullish" : item.sentiment === "negative" ? "Bearish" : "Mixed",
+    confidence: "Medium",
+    driver: CATEGORY_DRIVER[item.category] ?? "Market",
     imageUrl: null,
   }));
+}
+
+function inferRegion(title: string, summary: string) {
+  const text = `${title} ${summary}`.toLowerCase();
+  if (text.includes("brazil")) return "Brazil";
+  if (text.includes("russia")) return "Russia";
+  if (text.includes("china")) return "China";
+  if (text.includes("south africa")) return "South Africa";
+  if (text.includes("west africa") || text.includes("ivory coast") || text.includes("ghana")) return "West Africa";
+  if (text.includes("black sea") || text.includes("ukraine")) return "Black Sea";
+  if (text.includes("europe")) return "Europe";
+  if (text.includes("opec") || text.includes("middle east")) return "Middle East";
+  return "Global";
 }
 
 function detectCommodities(text: string): string[] {
@@ -168,8 +193,11 @@ async function fetchAllNews() {
     for (const item of f.items ?? []) {
       const text = `${item.title ?? ""} ${item.contentSnippet ?? item.content ?? ""}`;
       const commodities = detectCommodities(text);
+      if (!commodities.length) continue;
       const category = detectCategory(text);
       const sentiment = detectSentiment(text);
+      const regionRelevance = inferRegion(item.title ?? "", item.contentSnippet ?? item.content ?? "");
+      const relevanceScore = Math.min(98, 62 + commodities.length * 12 + (category === "weather" || category === "geopolitical" || category === "supply" ? 14 : 6));
       articles.push({
         id: Buffer.from(item.link ?? item.guid ?? text.slice(0, 50)).toString("base64").slice(0, 16),
         title: item.title ?? "Untitled",
@@ -180,6 +208,11 @@ async function fetchAllNews() {
         commodities,
         sentiment,
         category,
+        relevanceScore,
+        regionRelevance,
+        marketImpact: sentiment === "positive" ? "Bullish" : sentiment === "negative" ? "Bearish" : "Mixed",
+        confidence: relevanceScore >= 85 ? "High" : relevanceScore >= 70 ? "Medium" : "Low",
+        driver: CATEGORY_DRIVER[category] ?? "Market",
         imageUrl: null,
       });
     }

@@ -83,7 +83,7 @@ function RegionWeatherCard({ region }: { region: { id: string; name: string; cou
 
 export default function CommodityPage() {
   const params = useParams<{ symbol: string }>();
-  const symbol = params.symbol?.toLowerCase() ?? "";
+  const symbol = params.symbol?.toLowerCase() === "natural-gas" ? "natgas" : params.symbol?.toLowerCase() ?? "";
 
   const { data: commodity, isLoading } = useGetCommodity(symbol, {
     query: { queryKey: getGetCommodityQueryKey(symbol), refetchInterval: 30000, enabled: !!symbol }

@@ -3,18 +3,24 @@ import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  AlertTriangle,
   ArrowRightLeft,
   BarChart3,
+  Bell,
   BookOpen,
   Command,
   Database,
+  FileText,
   GitBranch,
+  Landmark,
   Map as MapIcon,
   MapPin,
   Newspaper,
   Search,
+  Ship,
   TrendingUp,
   X,
+  Zap,
 } from "lucide-react";
 import { apiGetJson, getListCommoditiesQueryKey, useListCommodities } from "@workspace/api-client-react";
 import { type GlobalIntelligence, type RegionNode, colorForCommodity } from "@/lib/intelligence";
@@ -104,7 +110,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
     results.push(
       { id: "nav-dashboard", title: "Macro Terminal", eyebrow: "Navigation", detail: "Supply shocks, concentration risk, market breadth", href: "/", icon: <BarChart3 className="h-4 w-4 text-primary" /> },
+      { id: "nav-risk", title: "Risk Monitor", eyebrow: "Navigation", detail: "Ranked commodity risks, supply concentration, sanctions and weather", href: "/risk", icon: <AlertTriangle className="h-4 w-4 text-primary" /> },
+      { id: "nav-sanctions", title: "Sanctions", eyebrow: "Navigation", detail: "OFAC/EU/UK HMT-style commodity exposure reference model", href: "/sanctions", icon: <Landmark className="h-4 w-4 text-primary" /> },
+      { id: "nav-flows", title: "Trade Flows", eyebrow: "Navigation", detail: "Export corridors, chokepoints, and route risk", href: "/flows", icon: <Ship className="h-4 w-4 text-primary" /> },
+      { id: "nav-simulator", title: "Shock Simulator", eyebrow: "Navigation", detail: "Rule-based scenario shocks and price-impact estimates", href: "/simulator", icon: <Zap className="h-4 w-4 text-primary" /> },
       { id: "nav-compare", title: "Comparison Mode", eyebrow: "Navigation", detail: "Side-by-side commodity risk and production analytics", href: "/compare", icon: <ArrowRightLeft className="h-4 w-4 text-primary" /> },
+      { id: "nav-alerts", title: "Alerts", eyebrow: "Navigation", detail: "Local watchlist for commodities, regions and risks", href: "/alerts", icon: <Bell className="h-4 w-4 text-primary" /> },
+      { id: "nav-reports", title: "Reports", eyebrow: "Navigation", detail: "Generate printable commodity risk reports", href: "/reports", icon: <FileText className="h-4 w-4 text-primary" /> },
       { id: "nav-methodology", title: "Methodology", eyebrow: "Navigation", detail: "Sources, formulas, unit conversions, confidence levels", href: "/methodology", icon: <BookOpen className="h-4 w-4 text-primary" /> },
     );
 
@@ -120,27 +132,70 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     setQuery("");
   }
 
+  function updateTime(value?: string) {
+    if (!value) return "May 2026";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "May 2026";
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function contractLabel(id: string) {
+    const labels: Record<string, string> = {
+      gold: "Spot proxy",
+      silver: "Spot proxy",
+      platinum: "NYMEX delayed",
+      palladium: "NYMEX delayed",
+      copper: "COMEX delayed",
+      wti: "NYMEX delayed",
+      brent: "ICE delayed",
+      natgas: "NYMEX delayed",
+      wheat: "CBOT delayed",
+      corn: "CBOT delayed",
+      soybeans: "CBOT delayed",
+      rice: "CBOT delayed",
+      cocoa: "ICE delayed",
+      coffee: "ICE delayed",
+      sugar: "ICE delayed",
+      cotton: "ICE delayed",
+    };
+    return labels[id] ?? "Delayed";
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background font-mono text-sm text-foreground">
       <div className="flex h-8 shrink-0 items-center overflow-hidden border-b border-border bg-card">
         <div className="flex animate-marquee whitespace-nowrap">
           {commodities?.map((c) => (
-            <div key={c.symbol} className="flex items-center space-x-2 border-r border-border px-6">
-              <span className="font-bold text-muted-foreground">{c.symbol}</span>
-              <span>{c.price.toFixed(2)}</span>
+            <Link
+              key={c.symbol}
+              href={`/commodity/${c.id}`}
+              title={`${c.name} | Open n/a | High ${c.high24h?.toFixed?.(2) ?? "-"} | Low ${c.low24h?.toFixed?.(2) ?? "-"} | Source: futures/spot proxy | Status: ${contractLabel(c.id)} | Updated ${updateTime(c.lastUpdated)}`}
+              className="flex items-center space-x-2 border-r border-border px-6 transition-colors hover:bg-secondary/35"
+            >
+              <span className="font-bold text-muted-foreground">{c.name}</span>
+              <span className="text-[10px] uppercase text-primary">{contractLabel(c.id)}</span>
+              <span>{c.price.toFixed(2)} {c.unit}</span>
               <span className={c.change >= 0 ? "text-success" : "text-destructive"}>
                 {c.change >= 0 ? "+" : ""}{c.changePercent.toFixed(2)}%
               </span>
-            </div>
+              <span className="text-[10px] text-muted-foreground">{updateTime(c.lastUpdated)}</span>
+            </Link>
           ))}
           {commodities?.map((c) => (
-            <div key={`${c.symbol}-dup`} className="flex items-center space-x-2 border-r border-border px-6">
-              <span className="font-bold text-muted-foreground">{c.symbol}</span>
-              <span>{c.price.toFixed(2)}</span>
+            <Link
+              key={`${c.symbol}-dup`}
+              href={`/commodity/${c.id}`}
+              title={`${c.name} | Open n/a | High ${c.high24h?.toFixed?.(2) ?? "-"} | Low ${c.low24h?.toFixed?.(2) ?? "-"} | Source: futures/spot proxy | Status: ${contractLabel(c.id)} | Updated ${updateTime(c.lastUpdated)}`}
+              className="flex items-center space-x-2 border-r border-border px-6 transition-colors hover:bg-secondary/35"
+            >
+              <span className="font-bold text-muted-foreground">{c.name}</span>
+              <span className="text-[10px] uppercase text-primary">{contractLabel(c.id)}</span>
+              <span>{c.price.toFixed(2)} {c.unit}</span>
               <span className={c.change >= 0 ? "text-success" : "text-destructive"}>
                 {c.change >= 0 ? "+" : ""}{c.changePercent.toFixed(2)}%
               </span>
-            </div>
+              <span className="text-[10px] text-muted-foreground">{updateTime(c.lastUpdated)}</span>
+            </Link>
           ))}
         </div>
       </div>
@@ -160,17 +215,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="ml-auto hidden rounded border border-border px-1.5 py-0.5 text-[10px] md:block">Cmd K</span>
           </button>
           <nav className="flex flex-1 flex-col space-y-2 px-2 py-2">
-            <NavItem href="/" icon={<BarChart3 />} label="Macro Terminal" active={location === "/"} />
-            <NavItem href="/map" icon={<MapIcon />} label="Global Intelligence Map" active={location === "/map"} />
-            <NavItem href="/compare" icon={<ArrowRightLeft />} label="Comparison Mode" active={location === "/compare"} />
-            <NavItem href="/news" icon={<Newspaper />} label="Commodity News" active={location === "/news"} />
+            <NavItem href="/" icon={<BarChart3 />} label="Overview" active={location === "/"} />
+            <NavItem href="/map" icon={<MapIcon />} label="Global Map" active={location === "/map"} />
+            <NavItem href="/risk" icon={<AlertTriangle />} label="Risk Monitor" active={location === "/risk"} />
+            <NavItem href="/sanctions" icon={<Landmark />} label="Sanctions" active={location === "/sanctions"} />
+            <NavItem href="/flows" icon={<Ship />} label="Trade Flows" active={location === "/flows"} />
+            <NavItem href="/simulator" icon={<Zap />} label="Shock Simulator" active={location === "/simulator"} />
+            <NavItem href="/compare" icon={<ArrowRightLeft />} label="Compare" active={location === "/compare"} />
+            <NavItem href="/alerts" icon={<Bell />} label="Alerts" active={location === "/alerts"} />
+            <NavItem href="/reports" icon={<FileText />} label="Reports" active={location === "/reports"} />
+            <NavItem href="/news" icon={<Newspaper />} label="News" active={location === "/news"} />
             <NavItem href="/methodology" icon={<BookOpen />} label="Methodology" active={location === "/methodology"} />
           </nav>
           <div className="hidden border-t border-border p-3 text-[11px] leading-relaxed text-muted-foreground md:block">
             <div className="mb-1 flex items-center gap-2 font-bold uppercase tracking-wider text-primary">
               <Database className="h-3.5 w-3.5" /> Data status
             </div>
-            Static May 2026 baselines, delayed futures proxy, source confidence shown in panels.
+            May 2026 public baselines, delayed/estimated prices, source confidence shown in panels.
           </div>
         </aside>
 

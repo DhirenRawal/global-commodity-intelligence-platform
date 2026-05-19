@@ -58,7 +58,7 @@ export default function MethodologyPage() {
 
         <MethodCard title="Production Value" icon={<Gauge className="h-4 w-4" />}>
           <div className="space-y-2">
-            <p>Native production units are converted into the pricing unit before applying live or static futures proxies.</p>
+            <p>Native production units are converted into the pricing unit before applying delayed market or static futures proxies.</p>
             <div className="rounded border border-border bg-secondary/35 p-3 font-mono text-xs text-foreground">
               value = production * conversionFactor * quotedPrice
             </div>
@@ -74,6 +74,26 @@ export default function MethodologyPage() {
           </div>
         </MethodCard>
       </section>
+
+      <Card className="border-border bg-card">
+        <CardContent className="p-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary">
+            <Gauge className="h-4 w-4" /> Risk Score Methodology
+          </div>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1.2fr]">
+            <div className="text-sm leading-relaxed text-muted-foreground">
+              The commodity risk score is a screening model, not an investment recommendation. It ranks current structural exposure using public production coverage, concentration, sanctions exposure, weather sensitivity, and inventory tightness proxies.
+            </div>
+            <div className="rounded border border-border bg-secondary/35 p-3 font-mono text-xs leading-relaxed text-foreground">
+              riskScore = 0.30 * geopoliticalRisk<br />
+              + 0.25 * supplyConcentration<br />
+              + 0.20 * weatherRisk<br />
+              + 0.15 * sanctionsExposure<br />
+              + 0.10 * inventoryTightness
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <Card className="border-border bg-card">
@@ -153,7 +173,7 @@ export default function MethodologyPage() {
                 </div>
                 <div className="rounded border border-border bg-secondary/30 p-3">
                   <div className="text-muted-foreground">Weather layer</div>
-                  <div className="mt-1 font-bold text-foreground">Live when API available</div>
+                  <div className="mt-1 font-bold text-foreground">API-backed when available</div>
                 </div>
                 <div className="rounded border border-border bg-secondary/30 p-3">
                   <div className="text-muted-foreground">Static deployment</div>

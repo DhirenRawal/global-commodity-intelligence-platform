@@ -65,7 +65,7 @@ const COMMODITIES_LIST = [
 const MAP_MODES = ["marker", "heatmap", "choropleth", "trade-flow", "risk", "weather", "satellite", "terrain"] as const;
 const REGIONS = ["North America", "South America", "Africa", "Europe", "Middle East", "Asia-Pacific"] as const;
 const RISK_FILTERS = ["High climate risk", "High geopolitical risk", "High sanctions exposure", "Export dependency"] as const;
-const PANEL_TABS = ["Overview", "Production", "Risk", "Weather", "Trade", "News", "Methodology"] as const;
+const PANEL_TABS = ["Overview", "Production", "Trade", "Risk", "Weather", "News", "Sources"] as const;
 
 type MapMode = (typeof MAP_MODES)[number];
 type RiskFilter = (typeof RISK_FILTERS)[number];
@@ -396,7 +396,7 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
           </div>
         </div>}
 
-        {show(["Overview", "Weather", "Methodology"]) && <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {show(["Overview", "Weather", "Sources"]) && <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div className="rounded border border-border bg-secondary/25 p-3">
             <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <Cloud className="h-3.5 w-3.5" /> Weather Risk
@@ -410,6 +410,9 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
                   <span className="text-muted-foreground">{weather.condition}</span>
                 </div>
                 <div className="text-muted-foreground">Humidity {weather.humidity}% / Wind {weather.windSpeed} km/h</div>
+                <div className="rounded border border-border bg-background/40 p-2 text-muted-foreground">
+                  Market weather impact: <span className="text-foreground">{region.climateRisk === "high" ? `Bullish ${commodityMeta(region.commodityId).name}` : region.climateRisk === "medium" ? "Watch for production volatility" : "Limited immediate price signal"}</span>
+                </div>
               </div>
             ) : (
               <div className="text-xs text-muted-foreground">Weather unavailable</div>
@@ -463,7 +466,7 @@ function RegionPanel({ region, intelligence, year, onClose }: { region: Region; 
           </div>
         ) : null}
 
-        {show(["Methodology"]) && (
+        {show(["Sources"]) && (
           <div className="rounded border border-border bg-secondary/25 p-3 text-xs leading-relaxed text-muted-foreground">
             <div className="mb-2 font-bold uppercase tracking-wider text-foreground">Calculation Method</div>
             <div>World share = producer production / global production baseline * 100.</div>
@@ -527,7 +530,7 @@ function CommodityTerminal({
       <div className="px-4 pb-4">
         <div className="mb-2 flex items-center justify-between">
           <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Top Producers</div>
-          <div className="text-xs text-muted-foreground">Live {price > 0 ? `$${price.toFixed(2)} ${unit}` : "pricing loading"}</div>
+          <div className="text-xs text-muted-foreground">Price proxy {price > 0 ? `$${price.toFixed(2)} ${unit}` : "loading"}</div>
         </div>
         <div className="overflow-hidden rounded border border-border">
           <table className="w-full text-xs">
@@ -785,10 +788,14 @@ export default function MapPage() {
                 <Popup>
                   <div className="w-56 space-y-1 text-xs">
                     <div className="font-bold">{region.name}</div>
-                    <div className="text-muted-foreground">{region.country}</div>
-                    <div>{region.count ? `${region.count} clustered producers` : `${region.shareOfWorld.toFixed(2)}% world share`}</div>
+                    <div className="text-muted-foreground">{region.country} / {region.commodityId.toUpperCase()}</div>
+                    <div>{region.count ? `${region.count} clustered producers` : `~${region.shareOfWorld.toFixed(2)}% of global production, estimated`}</div>
                     <div>{formatNumber(production)} {region.outputUnit}</div>
+                    {!region.count && <div>Export relevance: {region.exportShare && region.exportShare > 15 ? "High" : region.exportShare && region.exportShare > 5 ? "Medium" : "Low"}</div>}
                     <div className="text-muted-foreground">Risk score {region.riskScore ?? "-"}</div>
+                    <div className="text-muted-foreground">Source: {region.source}</div>
+                    <div className="text-muted-foreground">Updated: {region.lastUpdated}</div>
+                    {!region.count && <div className="pt-1 text-primary">Click for region intelligence</div>}
                   </div>
                 </Popup>
               </CircleMarker>

@@ -145,7 +145,7 @@ export default function ComparePage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded border border-border bg-secondary/30 p-3">
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Live proxy</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Price proxy</div>
                     <div className="mt-1 font-mono text-xl font-bold text-foreground">{quote?.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
                     <div className={(quote?.changePercent ?? 0) >= 0 ? "text-xs text-success" : "text-xs text-destructive"}>{(quote?.changePercent ?? 0) >= 0 ? "+" : ""}{quote?.changePercent.toFixed(2)}%</div>
                   </div>

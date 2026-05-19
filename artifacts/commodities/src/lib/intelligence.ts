@@ -39,12 +39,23 @@ export type CommodityBaseline = {
   globalProduction: number;
   globalConsumption: number;
   globalExports: number;
+  globalImports?: number;
   globalReserves: number;
   unit: string;
+  productionUnit?: string;
+  priceUnit?: string;
+  valueUnit?: string;
   priceMultiplier: number;
+  conversionFactor?: number;
   source: string;
+  secondarySources?: string[];
   sourceUrl?: string | null;
   lastUpdated: string;
+  methodology?: string;
+  definition?: string;
+  dataConfidence?: string;
+  valueCalculationMethod?: string;
+  estimated?: boolean;
 };
 
 export type CoverageRow = {
@@ -150,6 +161,16 @@ export type CommodityIntelligence = {
     trackedCoveragePct: number;
     exportDependencePct: number;
     marketShareFormula: string;
+    annualValueFormula?: string;
+    riskScore?: {
+      score: number;
+      geopoliticalRisk: number;
+      supplyConcentration: number;
+      weatherRisk: number;
+      sanctionsExposure: number;
+      inventoryTightness: number;
+      formula: string;
+    };
   };
 };
 
@@ -207,4 +228,45 @@ export function downloadTextFile(filename: string, content: string, type = "text
 export function csvEscape(value: unknown) {
   const text = String(value ?? "");
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+export function marketShare(producerProduction: number, globalProduction: number) {
+  return globalProduction > 0 ? (producerProduction / globalProduction) * 100 : 0;
+}
+
+export function trackedCoverage(trackedProduction: number, globalProduction: number) {
+  return globalProduction > 0 ? (trackedProduction / globalProduction) * 100 : 0;
+}
+
+export function annualProductionValue(production: number, conversionFactor: number, price: number) {
+  return production * conversionFactor * price;
+}
+
+export function normalizeRisk(level?: string) {
+  if (level === "high") return 100;
+  if (level === "medium") return 62;
+  if (level === "low") return 28;
+  return 45;
+}
+
+export function marketDriverForCommodity(id: string) {
+  const drivers: Record<string, string> = {
+    gold: "Fed rates / central banks",
+    silver: "solar demand / real rates",
+    platinum: "auto catalysts / South Africa power",
+    palladium: "Russia sanctions / auto catalysts",
+    copper: "China demand / mine disruptions",
+    wti: "OPEC / inventories",
+    brent: "seaborne risk / OPEC",
+    natgas: "LNG flows / weather demand",
+    wheat: "Black Sea exports / weather",
+    corn: "US weather / ethanol",
+    soybeans: "Brazil-China corridor",
+    rice: "export restrictions",
+    cocoa: "West Africa crop stress",
+    coffee: "Brazil weather",
+    sugar: "Brazil cane mix / ethanol",
+    cotton: "textiles / trade policy",
+  };
+  return drivers[id] ?? "supply / demand balance";
 }

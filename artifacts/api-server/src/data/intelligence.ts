@@ -139,6 +139,99 @@ function riskValue(level: string) {
   return level === "high" ? 3 : level === "medium" ? 2 : 1;
 }
 
+const PRICE_UNITS: Record<string, string> = {
+  gold: "USD/troy oz",
+  silver: "USD/troy oz",
+  platinum: "USD/troy oz",
+  palladium: "USD/troy oz",
+  copper: "USD/lb",
+  wti: "USD/bbl",
+  brent: "USD/bbl",
+  natgas: "USD/MMBtu",
+  wheat: "USD/bu",
+  corn: "USD/bu",
+  soybeans: "USD/bu",
+  rice: "USD/cwt",
+  cocoa: "USD/MT",
+  coffee: "US cents/lb",
+  sugar: "US cents/lb",
+  cotton: "US cents/lb",
+};
+
+const VALUE_METHODS: Record<string, string> = {
+  wti: "barrels per day * 365 * USD per barrel",
+  brent: "barrels per day * 365 * USD per barrel",
+  natgas: "bcm per year * 35,314,666 MMBtu per bcm * USD per MMBtu",
+  gold: "metric tonnes * 32,150.7466 troy ounces per tonne * USD per troy ounce",
+  silver: "metric tonnes * 32,150.7466 troy ounces per tonne * USD per troy ounce",
+  platinum: "metric tonnes * 32,150.7466 troy ounces per tonne * USD per troy ounce",
+  palladium: "metric tonnes * 32,150.7466 troy ounces per tonne * USD per troy ounce",
+  copper: "metric tonnes * 2,204.623 pounds per tonne * USD per pound",
+};
+
+const BASELINE_METHODS: Record<string, string> = {
+  gold: "Mine production baseline; demand includes jewelry, bars, official sector, ETFs, and technology where available.",
+  silver: "Mine production baseline with byproduct supply context from lead-zinc, copper, and gold operations.",
+  platinum: "Mine production baseline; risk model emphasizes PGM concentration in South Africa and Russia.",
+  palladium: "Mine production baseline; downstream exposure focused on auto catalysts and sanctions risk.",
+  copper: "Mine production baseline; demand proxy emphasizes China, grid capex, construction, and smelter flows.",
+  wti: "Crude oil production benchmark represented in barrels per day; WTI is a pricing proxy, not total US supply only.",
+  brent: "Global crude/liquids production benchmark represented in barrels per day; Brent is the seaborne pricing proxy.",
+  natgas: "Marketed natural gas production baseline in bcm per year with LNG and pipeline trade context.",
+  wheat: "Crop production baseline from public crop balance references; trade risk emphasizes Black Sea export reliability.",
+  corn: "Crop production baseline with feed, ethanol, and export corridor risk context.",
+  soybeans: "Oilseed production baseline with Brazil-US-China corridor concentration and crush demand context.",
+  rice: "Crop production baseline; export restriction and food security risk emphasized.",
+  cocoa: "Bean production baseline with West Africa concentration and grinder demand context.",
+  coffee: "Green coffee equivalent production baseline; weather risk emphasizes Brazil arabica and Vietnam robusta.",
+  sugar: "Sugar production baseline; Brazil cane mix links sugar and ethanol markets.",
+  cotton: "Lint/fiber production baseline; textile demand and trade policy risk emphasized.",
+};
+
+function confidenceForCoverage(coveragePct?: number) {
+  if (coveragePct == null) return "Medium";
+  if (coveragePct >= 85) return "High";
+  if (coveragePct >= 65) return "Medium";
+  return "Watch";
+}
+
+function enrichBaseline(commodityId: string, coveragePct?: number) {
+  const meta = COMMODITY_META[commodityId];
+  if (!meta) return undefined;
+  return {
+    ...meta,
+    globalImports: meta.globalExports,
+    productionUnit: meta.unit,
+    priceUnit: PRICE_UNITS[commodityId] ?? "pricing unit",
+    valueUnit: "USD/year",
+    conversionFactor: meta.priceMultiplier,
+    secondarySources: meta.source.includes(";") ? meta.source.split(";").map((item) => item.trim()) : [meta.source],
+    methodology: BASELINE_METHODS[commodityId] ?? "Composite public reference range with estimated producer-level allocation.",
+    definition: commodityId === "wti" || commodityId === "brent" ? "Crude/liquids production" : meta.unit.includes("bcm") ? "Marketed production" : meta.unit.includes("bbl") ? "Daily production" : "Annual production",
+    dataConfidence: confidenceForCoverage(coveragePct),
+    valueCalculationMethod: VALUE_METHODS[commodityId] ?? "production * conversion factor * quoted price",
+    estimated: true,
+  };
+}
+
+function commodityRiskScore(commodityId: string, producers: ReturnType<typeof regionsForCommodity>, analytics: { concentrationIndex: number; supplyDemandImbalance: number; trackedCoveragePct: number }) {
+  const geopoliticalRisk = Math.min(100, producers.reduce((sum, region) => sum + riskValue(region.geopoliticalRisk) * region.shareOfWorld, 0) / Math.max(producers.reduce((sum, region) => sum + region.shareOfWorld, 0), 1) * 33.34);
+  const sanctionsExposure = Math.min(100, producers.reduce((sum, region) => sum + riskValue(region.sanctionsExposure) * region.shareOfWorld, 0) / Math.max(producers.reduce((sum, region) => sum + region.shareOfWorld, 0), 1) * 33.34);
+  const weatherRisk = Math.min(100, producers.reduce((sum, region) => sum + riskValue(region.climateRisk) * region.shareOfWorld, 0) / Math.max(producers.reduce((sum, region) => sum + region.shareOfWorld, 0), 1) * 33.34);
+  const supplyConcentration = Math.min(100, analytics.concentrationIndex / 12);
+  const inventoryTightness = Math.min(100, Math.abs(analytics.supplyDemandImbalance) * 8 + Math.max(0, 100 - analytics.trackedCoveragePct) * 0.25);
+  const score = 0.3 * geopoliticalRisk + 0.25 * supplyConcentration + 0.2 * weatherRisk + 0.15 * sanctionsExposure + 0.1 * inventoryTightness;
+  return {
+    score: Math.round(score),
+    geopoliticalRisk: Math.round(geopoliticalRisk),
+    supplyConcentration: Math.round(supplyConcentration),
+    weatherRisk: Math.round(weatherRisk),
+    sanctionsExposure: Math.round(sanctionsExposure),
+    inventoryTightness: Math.round(inventoryTightness),
+    formula: "0.30*geopolitical + 0.25*supplyConcentration + 0.20*weather + 0.15*sanctions + 0.10*inventoryTightness",
+  };
+}
+
 export function getCommodityIntelligence(commodityId: string) {
   const meta = COMMODITY_META[commodityId];
   const producers = regionsForCommodity(commodityId);
@@ -153,7 +246,7 @@ export function getCommodityIntelligence(commodityId: string) {
     id: commodityId,
     name: COMMODITY_NAMES[commodityId] ?? commodityId,
     group: COMMODITY_GROUPS[commodityId] ?? "Other",
-    baseline: meta,
+    baseline: enrichBaseline(commodityId, coverage?.coveragePct) ?? meta,
     coverage,
     producers,
     flows: TRADE_FLOWS.filter((flow) => flow.commodityId === commodityId),
@@ -168,6 +261,12 @@ export function getCommodityIntelligence(commodityId: string) {
       trackedCoveragePct: coverage?.coveragePct ?? 0,
       exportDependencePct: meta ? Number(((meta.globalExports / Math.max(meta.globalProduction, 1)) * 100).toFixed(1)) : 0,
       marketShareFormula: "producer.production / globalProduction * 100",
+      annualValueFormula: "production * conversionFactor * price",
+      riskScore: commodityRiskScore(commodityId, producers, {
+        concentrationIndex: Math.round(hhi),
+        supplyDemandImbalance: Number(supplyDemandImbalance.toFixed(2)),
+        trackedCoveragePct: coverage?.coveragePct ?? 0,
+      }),
     },
   };
 }
@@ -186,14 +285,14 @@ export function getGlobalIntelligence() {
 
   return {
     commodities: commodities.map(({ producers, ...commodity }) => commodity),
-    baselines: COMMODITY_META,
+    baselines: Object.fromEntries(Object.keys(COMMODITY_META).map((commodityId) => [commodityId, enrichBaseline(commodityId, coverageForCommodity(commodityId)?.coveragePct)])),
     coverage: COVERAGE,
     flows: TRADE_FLOWS,
     scenarios: SHOCK_SCENARIOS,
     dependencies: DEPENDENCY_RISKS,
     terminalCards: [
       { id: "supply-shock", label: "Largest supply shock", value: `${COMMODITY_NAMES[largestSupplyShock?.commodityId] ?? "N/A"} / ${largestSupplyShock?.country ?? "N/A"}`, detail: `${largestSupplyShock?.name ?? ""} has ${largestSupplyShock?.shareOfWorld ?? 0}% world share exposed to historical disruption.` },
-      { id: "price-momentum", label: "Strongest price momentum", value: "Live futures linked", detail: "Momentum card uses Yahoo Finance futures changes when quotes are available." },
+      { id: "price-momentum", label: "Strongest price momentum", value: "Delayed futures proxy", detail: "Momentum card uses futures proxy changes when quotes are available and static fallback values when deployed publicly." },
       { id: "geopolitical", label: "Highest geopolitical risk", value: `${highestGeopoliticalRisk?.country ?? "N/A"} ${COMMODITY_NAMES[highestGeopoliticalRisk?.commodityId] ?? ""}`, detail: `${highestGeopoliticalRisk?.name ?? ""} screens high on sanctions, conflict, or policy risk.` },
       { id: "largest-exporter", label: "Largest exporter", value: `${largestExporter?.country ?? "N/A"} ${COMMODITY_NAMES[largestExporter?.commodityId] ?? ""}`, detail: `${largestExporter?.exportShare ?? 0}% export dominance proxy based on producer share.` },
       { id: "weather", label: "Biggest weather disruption", value: `${biggestWeatherDisruption?.country ?? "N/A"} ${COMMODITY_NAMES[biggestWeatherDisruption?.commodityId] ?? ""}`, detail: `${biggestWeatherDisruption?.name ?? ""} has high modeled climate sensitivity.` },
